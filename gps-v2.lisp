@@ -1,7 +1,24 @@
-                                        ;GPS: General Problem Solver v1
+                                        ;GPS: General Problem Solver v2
 
-                                        ;find-all function needs an implementation in order to work
-                                        ;Don't forget to run: (load "auxfns.lisp") in repl
+(defun executing-p (x)
+  "Is x of the form: (executing...) ?"
+  (starts-with x 'executing))
+
+(defun starts-with (list x)
+  "Is this a list whose first element is x?"
+  (and (consp list) (eql (first list) x)))
+
+(defun convert-op (op)
+  "Make op conform to the (EXECUTING op) convention."
+  (unless (some #'executing-p (op-add-list op))
+    (push (list 'executing (op-action op)) (op-add-list op)))
+  op)
+
+(defun op (action &key preconds add-list del-list)
+  "Make a new operator that obeys the (EXECUTING op) convention."
+  (convert-op
+   (make-op :action action :preconds preconds
+            :add-list add-list :del-list del-list)))
 
 (defvar *state* nil "The current state: a list of conditions.")
 
@@ -10,9 +27,9 @@
 (defstruct op "An operation"
            (action nil) (preconds nil) (add-list nil) (del-list nil))
 
-(defun gps (*state* goals *ops*)
+(defun gps (*state* goals &optional (*ops* *ops*))
   "General Problem Solver: achieve all goals using *ops*."
-  (if (every #'achieve-all goals) 'solved))
+  (remove-if #'atom (achieve-all (cons '(start) state) goals nill)))
 
 (defun achieve (goal)
   "A goal is achieved if it already holds,
@@ -62,8 +79,9 @@
             :add-list '(shop-has-money)
             :del-list '(have-money))))
 
-;(gps '(son-at-home car-works) '(son-at-school) *school-ops*)
+                                        ;(gps '(son-at-home car-works) '(son-at-school) *school-ops*)
 
+(mapc #'convert-op *school-ops*)
 
 ;;;===================================
 
